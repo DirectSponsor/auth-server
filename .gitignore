@@ -1,6 +1,10 @@
 # Runtime data (synced separately, never commit)
 data/
 
+# Sensitive credentials (NEVER commit these!)
+config.local.php
+email-config.php
+
 # Backups
 *.tar.gz
 *.backup

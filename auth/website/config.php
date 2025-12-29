@@ -2,17 +2,21 @@
 // Auth Server Configuration
 // For auth.directsponsor.org
 
-// Database connection (Auth Server)
-$auth_db_host = 'localhost';
-$auth_db_name = 'directsponsor_oauth';
-$auth_db_user = 'directsponsor_oauth';
-$auth_db_pass = 'ds9Hj#k2P9*mN';
-
-// JWT Configuration
-$jwt_secret = 'simple_secret_2025';
-$jwt_algorithm = 'HS256';
-$jwt_issuer = 'roflfaucet';
-$jwt_expiry = 3600; // 1 hour
+// Load sensitive credentials from local config (not in git)
+if (file_exists(__DIR__ . '/config.local.php')) {
+    require_once __DIR__ . '/config.local.php';
+} else {
+    // Fallback defaults for template/documentation purposes
+    $auth_db_host = 'localhost';
+    $auth_db_name = 'directsponsor_oauth';
+    $auth_db_user = 'directsponsor_oauth';
+    $auth_db_pass = 'YOUR_DATABASE_PASSWORD_HERE';
+    
+    $jwt_secret = 'YOUR_JWT_SECRET_HERE';
+    $jwt_algorithm = 'HS256';
+    $jwt_issuer = 'roflfaucet';
+    $jwt_expiry = 3600; // 1 hour
+}
 
 // Known redirect URIs (our own sites only)
 $allowed_redirects = [
