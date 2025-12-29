@@ -1,0 +1,23 @@
+# Runtime data (synced separately, never commit)
+data/
+
+# Backups
+*.tar.gz
+*.backup
+*.bak
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

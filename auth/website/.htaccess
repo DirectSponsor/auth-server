@@ -1,0 +1,18 @@
+# Authentication Service Access Control
+RewriteEngine On
+
+# CORS headers for authorized domains
+Header always set Access-Control-Allow-Origin "https://roflfaucet.com"
+Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+Header always set Access-Control-Allow-Headers "Authorization, Content-Type"
+Header always set Vary "Origin"
+
+# Security headers
+Header always set X-Content-Type-Options nosniff
+Header always set X-Frame-Options DENY
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+# Handle CORS preflight requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ - [R=200,L]
