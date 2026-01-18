@@ -42,15 +42,27 @@ Logic for this exists in `forgot-password.php` and `reset-password.php` but seem
 </div>
 ```
 
-## Future Feature: Magic Link Login
-*   **Goal:** Allow users to log in by clicking a link in their email (no password needed).
-*   **Implementation Plan:**
-    1.  **Create `magic-login.php`:**
-        *   Accept `email` input.
-        *   Generate a short-lived (5 min) random token.
-        *   Store token in DB (new column `magic_token` or reuse `reset_token` with flag).
-        *   Send email with link: `https://auth.directsponsor.org/verify-magic.php?token=XYZ`.
-    2.  **Create `verify-magic.php`:**
-        *   Validate token.
-        *   If valid, issue standard Session/JWT (same logic as `jwt-login.php`).
-        *   Redirect user to their intended destination (`redirect_uri`).
+## Completed Features (Jan 2026)
+
+### 1. Password Reset
+- **Status:** ✅ Implemented & Deployed
+- **Flow:**
+    - User clicks "Forgot Password?" on login page.
+    - Enters **Username**.
+    - System looks up email and sends reset link.
+    - User clicks link, enters new password.
+    - User receives success message with links to main sites.
+
+### 2. Magic Link Login
+- **Status:** ✅ Implemented & Deployed
+- **Flow:**
+    - User clicks "Log in with Magic Link" on login page.
+    - Checks input against **Email** OR **Username**.
+    - Generates 5-minute token.
+    - Sends email with magic link.
+    - User clicks link -> `verify-magic.php` -> invalidates token -> logs user in -> redirects to `redirect_uri`.
+    - **Robustness:** Stores `redirect_uri` in session to ensure correct redirection after email round-trip.
+
+### 3. Database Schema
+- Added `magic_token` and `magic_token_expires` to `users` table via SSH.
+

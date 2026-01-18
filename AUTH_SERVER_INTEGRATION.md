@@ -22,6 +22,14 @@ All of our front-facing sites (e.g. clickforcharity.net, roflfaucet.com, satoshi
 
 ---
 
+## 0. User Authentication Features
+The auth server provides the following ways for users to sign in:
+1.  **Standard Login:** Username + Password.
+2.  **Magic Link:** Users can request a login link via Email or Username. The link is sent to their registered email and logs them in instantly.
+3.  **Password Reset:** Users can reset their password by entering their Username. Instructions are emailed to them.
+
+---
+
 ## 1. Auth server configuration
 
 ### Local Repository
