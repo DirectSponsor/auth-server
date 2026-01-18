@@ -230,10 +230,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
+                <div style="text-align: right; margin-top: 5px; font-size: 0.9em;">
+                    <a href="forgot-password.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>" style="color: #667eea; text-decoration: none;">Forgot Password?</a>
+                </div>
             </div>
             
             <button type="submit" class="login-button">Sign In</button>
         </form>
+        
+        <div style="margin-top: 20px; text-align: center; border-bottom: 1px solid #eee; line-height: 0.1em; margin-bottom: 20px;">
+            <span style="background:#fff; padding:0 10px; color:#999; font-size: 0.9em;">OR</span>
+        </div>
+        
+        <div class="magic-link-section" style="text-align: center;">
+            <a href="magic-login.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>" style="display: inline-block; width: 100%; padding: 0.75rem; border: 2px solid #667eea; border-radius: 5px; color: #667eea; text-decoration: none; font-weight: 500; transition: all 0.2s; box-sizing: border-box;">
+                ✨ Log in with Magic Link
+            </a>
+        </div>
         
         <div class="signup-link">
             Don't have an account? <a href="jwt-signup.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>">Sign up here</a>

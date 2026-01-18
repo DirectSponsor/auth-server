@@ -284,4 +284,43 @@ function checkRateLimit($email, $type = 'reset', $maxAttempts = 3, $timeWindow =
     
     return false;
 }
+
+/**
+ * Send magic link login email
+ */
+function sendMagicLinkEmail($email, $username, $token) {
+    $magicLink = SITE_URL . "/verify-magic.php?token=" . urlencode($token);
+    
+    $subject = "Login to " . SITE_NAME;
+    
+    $body = "<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .button { display: inline-block; padding: 12px 24px; background-color: #667eea; color: white; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h2>Login Request</h2>
+        <p>Hi <strong>" . htmlspecialchars($username) . "</strong>,</p>
+        <p>You requested to log in to " . SITE_NAME . ". Click the button below to sign in instantly:</p>
+        <p><a href='" . $magicLink . "' class='button'>Sign In Now</a></p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p><a href='" . $magicLink . "'>" . $magicLink . "</a></p>
+        <p><strong>This link will expire in 5 minutes.</strong></p>
+        <p>If you didn't request this, you can safely ignore this email.</p>
+        <div class='footer'>
+            <p>Thanks,<br>" . SITE_NAME . " Team</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+    return sendEmail($email, $subject, $body, true);
+}
 ?>
