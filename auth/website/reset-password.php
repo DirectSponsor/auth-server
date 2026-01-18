@@ -228,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $token_valid) {
         <?php if ($message_type === 'success'): ?>
             <div class="back-link">
                 <a href="https://roflfaucet.com/">Go to RoflFaucet</a> | 
-                <a href="https://clickforcharity.org/">Go to Click For Charity</a>
+                <a href="https://clickforcharity.net/">Go to Click For Charity</a>
             </div>
         <?php endif; ?>
     </div>
