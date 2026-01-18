@@ -11,24 +11,24 @@ if ($redirect_uri && !validateRedirectUri($redirect_uri)) {
     $redirect_uri = '';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
-    $email = trim($_POST['email']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
+    $username = trim($_POST['username']);
     
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = 'Please enter a valid email address';
+    if (empty($username)) {
+        $message = 'Please enter your username';
         $message_type = 'error';
     } else {
         // Check rate limiting
-        if (checkRateLimit($email, 'reset', 3, 3600)) {
+        if (checkRateLimit($username, 'reset', 3, 3600)) {
             $message = 'Too many password reset attempts. Please try again later.';
             $message_type = 'error';
         } else {
             try {
                 $db = getAuthDB();
                 
-                // Check if email exists
-                $stmt = $db->prepare("SELECT id, username, email FROM users WHERE email = ?");
-                $stmt->execute([$email]);
+                // Check if username exists
+                $stmt = $db->prepare("SELECT id, username, email FROM users WHERE username = ?");
+                $stmt->execute([$username]);
                 $user = $stmt->fetch();
                 
                 if ($user) {
@@ -42,15 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                     
                     // Send email
                     if (sendPasswordResetEmail($user['email'], $user['username'], $token)) {
-                        $message = 'Password reset instructions have been sent to your email address.';
+                        $message = 'Password reset instructions have been sent to the email address on file.';
                         $message_type = 'success';
                     } else {
                         $message = 'Failed to send email. Please try again later.';
                         $message_type = 'error';
                     }
                 } else {
-                    // Don't reveal if email exists or not for security
-                    $message = 'If that email address is in our system, you will receive password reset instructions.';
+                    // Don't reveal if user exists or not for security (timing attack risk exists but minor here)
+                    $message = 'If that username exists, we sent password reset instructions to the registered email.';
                     $message_type = 'success';
                 }
             } catch (Exception $e) {
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             margin-bottom: 8px;
             font-weight: 500;
         }
-        input[type="email"] {
+        input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             font-size: 14px;
             transition: border-color 0.3s;
         }
-        input[type="email"]:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 <body>
     <div class="container">
         <h1>Forgot Password</h1>
-        <p class="subtitle">Enter your email address and we'll send you instructions to reset your password.</p>
+        <p class="subtitle">Enter your username and we'll send reset instructions to your email.</p>
         
         <?php if ($message): ?>
             <div class="message <?php echo htmlspecialchars($message_type); ?>">
@@ -180,14 +180,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         
         <form method="POST">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="username">Username</label>
                 <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
+                    type="text" 
+                    id="username" 
+                    name="username" 
                     required 
-                    placeholder="your@email.com"
-                    value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                    placeholder="Enter your username"
+                    value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>"
                 >
             </div>
             
