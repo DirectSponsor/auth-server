@@ -11,25 +11,34 @@ if ($redirect_uri && !validateRedirectUri($redirect_uri)) {
     $redirect_uri = '';
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
-    $email = trim($_POST['email']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_id'])) {
+    $login_id = trim($_POST['login_id']);
     
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = 'Please enter a valid email address';
+    if (empty($login_id)) {
+        $message = 'Please enter your email or username';
         $message_type = 'error';
     } else {
         // Check rate limiting
-        if (checkRateLimit($email, 'magic', 5, 300)) { // 5 attempts per 5 minutes
+        if (checkRateLimit($login_id, 'magic', 5, 300)) { // 5 attempts per 5 minutes
             $message = 'Too many login attempts. Please try again later.';
             $message_type = 'error';
         } else {
             try {
                 $db = getAuthDB();
                 
-                // Check if email exists
-                $stmt = $db->prepare("SELECT id, username, email FROM users WHERE email = ?");
-                $stmt->execute([$email]);
-                $user = $stmt->fetch();
+                $user = null;
+                // Determine if input is email
+                if (filter_var($login_id, FILTER_VALIDATE_EMAIL)) {
+                    // It's an email
+                    $stmt = $db->prepare("SELECT id, username, email FROM users WHERE email = ?");
+                    $stmt->execute([$login_id]);
+                    $user = $stmt->fetch();
+                } else {
+                    // Treat as username
+                    $stmt = $db->prepare("SELECT id, username, email FROM users WHERE username = ?");
+                    $stmt->execute([$login_id]);
+                    $user = $stmt->fetch();
+                }
                 
                 if ($user) {
                     // Generate magic token
@@ -49,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                         $message_type = 'error';
                     }
                 } else {
-                    $message = 'If an account exists with this email, we sent a login link.';
+                    $message = 'If an account exists with this email or username, we sent a login link to the registered email.';
                     $message_type = 'success';
                 }
             } catch (Exception $e) {
@@ -109,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             margin-bottom: 8px;
             font-weight: 500;
         }
-        input[type="email"] {
+        input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 2px solid #ddd;
@@ -117,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             font-size: 14px;
             transition: border-color 0.3s;
         }
-        input[type="email"]:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -169,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 <body>
     <div class="container">
         <h1>Magic Link Login</h1>
-        <p class="subtitle">Enter your email and we'll send you a link to log in instantly. No password required.</p>
+        <p class="subtitle">Enter your email or username and we'll send you a link to log in instantly. No password required.</p>
         
         <?php if ($message): ?>
             <div class="message <?php echo htmlspecialchars($message_type); ?>">
@@ -179,14 +188,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         
         <form method="POST">
             <div class="form-group">
-                <label for="email">Email Address</label>
+                <label for="login_id">Email or Username</label>
                 <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
+                    type="text" 
+                    id="login_id" 
+                    name="login_id" 
                     required 
-                    placeholder="your@email.com"
-                    value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                    placeholder="Enter email or username"
+                    value="<?php echo isset($_POST['login_id']) ? htmlspecialchars($_POST['login_id']) : ''; ?>"
                 >
             </div>
             
