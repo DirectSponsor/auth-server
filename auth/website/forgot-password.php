@@ -6,9 +6,16 @@ $message = '';
 $message_type = '';
 $redirect_uri = $_GET['redirect_uri'] ?? '';
 
+// Start session to safe-keep redirect uri (though reset-password usually relies on user clicking link in email, typically we don't redirect back automatically after reset but we offer a link)
+session_start();
+
 // Validate redirect URI if provided
-if ($redirect_uri && !validateRedirectUri($redirect_uri)) {
-    $redirect_uri = '';
+if ($redirect_uri) {
+    if (validateRedirectUri($redirect_uri)) {
+        $_SESSION['login_redirect_uri'] = $redirect_uri;
+    } else {
+        $redirect_uri = '';
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {

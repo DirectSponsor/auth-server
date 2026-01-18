@@ -6,9 +6,17 @@ $message = '';
 $message_type = '';
 $redirect_uri = $_GET['redirect_uri'] ?? '';
 
-// Validate redirect URI if provided
-if ($redirect_uri && !validateRedirectUri($redirect_uri)) {
-    $redirect_uri = '';
+// Start session to store redirect_uri for verification page
+session_start();
+if ($redirect_uri) {
+    if (validateRedirectUri($redirect_uri)) {
+        $_SESSION['login_redirect_uri'] = $redirect_uri;
+    } else {
+        $redirect_uri = '';
+    }
+} else {
+    // try to get from session if not in GET
+    $redirect_uri = $_SESSION['login_redirect_uri'] ?? '';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_id'])) {
