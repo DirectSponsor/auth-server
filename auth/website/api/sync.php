@@ -26,12 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 define('DATA_DIR', '/var/directsponsor-data/userdata');
 define('BALANCE_DIR', DATA_DIR . '/balances');
 define('PROFILE_DIR', DATA_DIR . '/profiles');
+define('FAUCET_DIR', DATA_DIR . '/faucets');
 define('MAX_REQUESTS_PER_MINUTE', 100);
 define('LOG_FILE', '/var/directsponsor-data/sync.log');
 
-// Ensure data directory exists
+// Ensure data directories exist
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
+}
+if (!is_dir(FAUCET_DIR)) {
+    mkdir(FAUCET_DIR, 0755, true);
 }
 
 // Rate limiting check

@@ -40,7 +40,11 @@ $allowed_redirects = [
     'https://satoshihost.ddns.net/',
     'https://satoshihost.duckdns.org',
     'https://satoshihost.duckdns.org/',
-    'http://127.0.0.1'
+    'http://127.0.0.1',
+    'https://faucetlist.org',
+    'https://faucetlist.org/',
+    'https://www.faucetlist.org',
+    'https://www.faucetlist.org/'
 ];
 
 // Database connection function
@@ -117,6 +121,8 @@ function setCorsHeaders() {
         'https://www.clickforcharity.net',
         'https://satoshihost.top',
         'https://www.satoshihost.top',
+        'https://faucetlist.org',
+        'https://www.faucetlist.org',
         'http://localhost',
         'https://satoshihost.ddns.net',
         'https://satoshihost.ddns.net/',
