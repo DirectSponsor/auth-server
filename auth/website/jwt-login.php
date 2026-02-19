@@ -44,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['expires'] = time() + (30 * 24 * 60 * 60); // 30 days
                 
+                logLoginEvent($db, $user['id'], siteFromRedirectUri($redirect_uri), 'password');
+                
                 // Create JWT token
                 global $jwt_issuer, $jwt_expiry;
                 

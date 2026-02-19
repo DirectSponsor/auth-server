@@ -143,4 +143,24 @@ function setCorsHeaders() {
     header("Access-Control-Allow-Headers: Content-Type, Authorization", true);
     header("Access-Control-Allow-Credentials: true", true);
 }
+
+// Extract a short site label from a redirect URI (e.g. "roflfaucet.com")
+function siteFromRedirectUri($uri) {
+    if (empty($uri)) return 'direct';
+    $host = parse_url($uri, PHP_URL_HOST);
+    if (!$host) return 'direct';
+    // Strip leading www.
+    $host = preg_replace('/^www\./', '', strtolower($host));
+    return $host ?: 'direct';
+}
+
+// Record a login event in login_log
+function logLoginEvent($db, $user_id, $site, $method = 'password') {
+    try {
+        $stmt = $db->prepare("INSERT INTO login_log (user_id, site, method) VALUES (?, ?, ?)");
+        $stmt->execute([(int)$user_id, $site, $method]);
+    } catch (Exception $e) {
+        error_log("logLoginEvent failed: " . $e->getMessage());
+    }
+}
 ?>

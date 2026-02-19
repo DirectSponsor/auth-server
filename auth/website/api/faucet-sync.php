@@ -17,10 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$faucetDataDir = '/var/directsponsor-data/faucetlist';
+// Use directory relative to script location for better portability
+$faucetDataDir = __DIR__ . '/../../data/faucetlist';
 
 if (!is_dir($faucetDataDir)) {
-    mkdir($faucetDataDir, 0755, true);
+    if (!@mkdir($faucetDataDir, 0755, true)) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Failed to create data directory: ' . $faucetDataDir]);
+        exit;
+    }
 }
 
 $userId = $_GET['user_id'] ?? '';
@@ -49,11 +54,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $faucets = $input['faucets'] ?? [];
 
     $json = json_encode($faucets, JSON_PRETTY_PRINT);
-    $result = file_put_contents($filePath, $json);
+    $result = @file_put_contents($filePath, $json);
 
     if ($result === false) {
+        $error = error_get_last();
         http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Failed to save data']);
+        echo json_encode([
+            'success' => false, 
+            'error' => 'Failed to save data',
+            'details' => $error ? $error['message'] : 'Unknown error',
+            'path' => $filePath,
+            'writable' => is_writable($faucetDataDir)
+        ]);
     } else {
         echo json_encode(['success' => true]);
     }

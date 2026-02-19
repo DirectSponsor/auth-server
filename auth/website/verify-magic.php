@@ -28,6 +28,9 @@ try {
         $_SESSION['email'] = $user['email'];
         $_SESSION['expires'] = time() + (30 * 24 * 60 * 60); // 30 days
         
+        $login_site = siteFromRedirectUri($_SESSION['login_redirect_uri'] ?? '');
+        logLoginEvent($db, $user['id'], $login_site, 'magic');
+        
         // Create JWT token
         global $jwt_issuer, $jwt_expiry;
         
