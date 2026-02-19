@@ -8,7 +8,9 @@ email-config.php
 # Backups
 *.tar.gz
 *.backup
+*.backup-*
 *.bak
+pre-upgrade-backup/
 
 # Logs
 *.log
