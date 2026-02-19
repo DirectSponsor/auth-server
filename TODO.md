@@ -1,10 +1,7 @@
 # Auth Server TODOs
 
 ## Deployment
-- [ ] **Fix Remote Permissions User**: The `deploy.sh` script attempts to `chown` files to `www-data:www-data`, but the remote server returns `invalid user`.
-    - **Error**: `chown: invalid user: ‘www-data:www-data’`
-    - **Location**: `deploy.sh` -> `fix_permissions()` function.
-    - **Action**: Web server runs as `apache` on this server — update `deploy.sh` to use `apache:apache`.
+- [x] **Fix Remote Permissions User**: Fixed `deploy.sh` to use `chown -R apache:apache` (removed erroneous `sudo`). Done 2026-02-19.
 
 ## PHP Upgrade
 - [x] **Upgrade PHP 7.2 → 8.2** on the `hub` server (auth + data server, `86.38.200.119`). Done 2026-02-19, now running PHP 8.2.30.

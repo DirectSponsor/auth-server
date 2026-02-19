@@ -117,7 +117,7 @@ deploy_files() {
 fix_permissions() {
     log "Fixing remote permissions..."
     ssh "$REMOTE_HOST" "
-        sudo chown -R www-data:www-data '$REMOTE_CODE_PATH'
+        chown -R apache:apache '$REMOTE_CODE_PATH'
         find '$REMOTE_CODE_PATH' -type d -exec chmod 755 {} \;
         find '$REMOTE_CODE_PATH' -type f -exec chmod 644 {} \;
     "
