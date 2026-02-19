@@ -56,11 +56,16 @@ Add any new docs or scripts under this folder so your AI or colleagues know wher
 
 `backup-to-remote.sh` runs weekly (Sunday 02:00) via cron on the production server and pushes a full snapshot to the backup server (`209.209.10.41`, port 5829). It captures:
 
-- MySQL database dump (`directsponsor_oauth`)
+- MySQL database dump (`directsponsor_oauth`) — all users, login_log, etc.
 - Web files (`/var/www/auth.directsponsor.org/public_html/`)
-- User data (`/var/directsponsor-data/`)
+- User data (`/var/directsponsor-data/`) — includes `users/` and `userdata/` flat-file profiles and balances
 
 Backups land in `/root/hub_backups/` on the backup server. The last 4 weekly archives are kept; older ones are pruned automatically. Logs go to `/var/log/hub-backup.log` on the auth server.
+
+### TODO: backup improvements
+
+- **Second backup server**: A second backup server is available. Update `backup-to-remote.sh` to push to both servers for redundancy.
+- **More frequent incremental backups**: Weekly full backups may be too infrequent given active user signups and balance changes. Consider a daily or hourly incremental backup of just `/var/directsponsor-data/` and a nightly DB dump — these are small and fast. The weekly full backup can remain as the recovery snapshot.
 
 To run a manual backup:
 ```bash
