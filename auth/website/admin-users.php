@@ -60,12 +60,15 @@ $db = getAuthDB();
 
 // Sorting
 $sort = $_GET['sort'] ?? 'newest';
-$order_clause = match($sort) {
-    'oldest'   => 'ORDER BY u.created_at ASC',
-    'username' => 'ORDER BY u.username ASC',
-    'site'     => 'ORDER BY u.signup_site ASC, u.created_at DESC',
-    default    => 'ORDER BY u.created_at DESC',
-};
+if ($sort === 'oldest') {
+    $order_clause = 'ORDER BY u.created_at ASC';
+} elseif ($sort === 'username') {
+    $order_clause = 'ORDER BY u.username ASC';
+} elseif ($sort === 'site') {
+    $order_clause = 'ORDER BY u.signup_site ASC, u.created_at DESC';
+} else {
+    $order_clause = 'ORDER BY u.created_at DESC';
+}
 
 // Search
 $search = trim($_GET['q'] ?? '');

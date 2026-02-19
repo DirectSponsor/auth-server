@@ -75,6 +75,33 @@ backup_remote_code() {
     success "Remote code snapshot stored."
 }
 
+# Safety check: preview deletions before they happen
+preview_deletions() {
+    log "Checking for files that would be DELETED on server..."
+    
+    local deletions
+    deletions=$(rsync -avzn --delete --itemize-changes \
+        --exclude='data/' \
+        --exclude='.git/' \
+        --exclude='*.log' \
+        --exclude='*.tmp' \
+        --exclude='deploy.sh' \
+        "$LOCAL_CODE_DIR/" "$REMOTE_HOST:$REMOTE_CODE_PATH/" 2>/dev/null | grep '^\*deleting' || true)
+    
+    if [[ -n "$deletions" ]]; then
+        warning "⚠️  The following files will be DELETED from the server:"
+        echo "$deletions" | sed 's/^\*deleting   /  - /'
+        echo ""
+        read -rp "Continue with these deletions? (y/N): " -n 1
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            error "Deployment cancelled to prevent deletions."
+        fi
+    else
+        success "No files will be deleted."
+    fi
+}
+
 deploy_files() {
     log "Deploying to $REMOTE_HOST..."
     rsync -avz --delete \
@@ -119,6 +146,7 @@ main() {
     pre_deploy_checks
     create_local_backup
     backup_remote_code
+    preview_deletions
     deploy_files
     fix_permissions
     success "Auth server deployment finished!"

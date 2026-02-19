@@ -51,3 +51,38 @@ If the production server is wiped:
 4. Run `deploy.sh` from the repo root to push any remaining tweaks and confirm the code works.
 
 Add any new docs or scripts under this folder so your AI or colleagues know where to look.
+
+## Backup to remote
+
+`backup-to-remote.sh` runs weekly (Sunday 02:00) via cron on the production server and pushes a full snapshot to the backup server (`209.209.10.41`, port 5829). It captures:
+
+- MySQL database dump (`directsponsor_oauth`)
+- Web files (`/var/www/auth.directsponsor.org/public_html/`)
+- User data (`/var/directsponsor-data/`)
+
+Backups land in `/root/hub_backups/` on the backup server. The last 4 weekly archives are kept; older ones are pruned automatically. Logs go to `/var/log/hub-backup.log` on the auth server.
+
+To run a manual backup:
+```bash
+ssh hub 'bash /root/backup-to-remote.sh'
+```
+
+To restore from a backup, extract the archive and restore each component:
+```bash
+# On the auth server:
+tar -xzf hub-full-YYYYMMDD-HHMMSS.tar.gz
+tar -xzf hub-backup-*/webfiles.tar.gz -C /
+mysql -u directsponsor_oauth -p directsponsor_oauth < hub-backup-*/database.sql
+tar -xzf hub-backup-*/userdata.tar.gz -C /
+```
+
+## Admin dashboard
+
+`auth/website/admin-users.php` is a password-protected admin page at `https://auth.directsponsor.org/admin-users.php`. It shows:
+
+- Total users, new signups (7/30 day), email verification stats
+- Signups broken down by which site the user first registered from
+- Login activity counts per site
+- Searchable, sortable, paginated user table with signup date, signup site, login count, and last login
+
+The admin password is set via `define('ADMIN_PASSWORD', '...')` in `config.local.php` (never committed to git).
