@@ -60,15 +60,23 @@ $db = getAuthDB();
 
 // Sorting
 $sort = $_GET['sort'] ?? 'newest';
-if ($sort === 'oldest') {
-    $order_clause = 'ORDER BY u.created_at ASC';
-} elseif ($sort === 'username') {
-    $order_clause = 'ORDER BY u.username ASC';
-} elseif ($sort === 'site') {
-    $order_clause = 'ORDER BY u.signup_site ASC, u.created_at DESC';
-} else {
-    $order_clause = 'ORDER BY u.created_at DESC';
-}
+$sort_map = [
+    'newest'       => 'ORDER BY u.created_at DESC',
+    'oldest'       => 'ORDER BY u.created_at ASC',
+    'username'     => 'ORDER BY u.username ASC',
+    'username_desc'=> 'ORDER BY u.username DESC',
+    'site'         => 'ORDER BY u.signup_site ASC, u.created_at DESC',
+    'site_desc'    => 'ORDER BY u.signup_site DESC, u.created_at DESC',
+    'logins'       => 'ORDER BY login_count DESC, u.created_at DESC',
+    'logins_asc'   => 'ORDER BY login_count ASC, u.created_at DESC',
+    'last_login'   => 'ORDER BY last_login DESC',
+    'last_login_asc'=> 'ORDER BY last_login ASC',
+    'id'           => 'ORDER BY u.id ASC',
+    'id_desc'      => 'ORDER BY u.id DESC',
+    'verified'     => 'ORDER BY u.email_verified DESC, u.created_at DESC',
+    'verified_asc' => 'ORDER BY u.email_verified ASC, u.created_at DESC',
+];
+$order_clause = $sort_map[$sort] ?? $sort_map['newest'];
 
 // Search
 $search = trim($_GET['q'] ?? '');
@@ -203,6 +211,16 @@ function qs(array $override = []) {
     unset($params['logout']);
     return '?' . http_build_query($params);
 }
+
+// Helper: generate toggle sort link for table headers
+function sortLink($column, $asc_key, $desc_key, $label) {
+    global $sort;
+    $next = ($sort === $asc_key) ? $desc_key : $asc_key;
+    $arrow = '';
+    if ($sort === $asc_key) $arrow = ' &#9650;';
+    elseif ($sort === $desc_key) $arrow = ' &#9660;';
+    return '<a href="' . qs(['sort' => $next, 'page' => 1]) . '">' . $label . $arrow . '</a>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -249,10 +267,9 @@ header a { color: #aab; font-size: .85rem; }
 .stat-card .num { font-size: 1.6rem; font-weight: 700; color: #1a1a2e; line-height: 1; }
 .stat-card .lbl { font-size: .75rem; color: #666; margin-top: .2rem; }
 
-/* Two-column layout */
-.cols { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
-.col-side { flex: 0 0 220px; display: flex; flex-direction: column; gap: 1rem; }
-.col-main { flex: 1 1 500px; }
+/* Side panels — horizontal row */
+.side-panels { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.side-panels .card { flex: 1 1 200px; min-width: 180px; }
 
 .card {
     background: #fff;
@@ -337,7 +354,8 @@ th {
     text-transform: uppercase;
     letter-spacing: .04em;
 }
-th a { color: #4a4e9e; }
+th a { color: #4a4e9e; text-decoration: none; }
+th a:hover { text-decoration: underline; }
 td {
     padding: .45rem .7rem;
     border-bottom: 1px solid #f0f0f0;
@@ -412,71 +430,68 @@ tr:hover td { background: #fafbff; }
         </div>
     </div>
 
-    <!-- Side panels + main table -->
-    <div class="cols">
+    <!-- Side panels — horizontal -->
+    <div class="side-panels">
 
-        <div class="col-side">
-
-            <!-- Signups by site -->
-            <div class="card">
-                <div class="card-head">Signups by site</div>
-                <div class="card-body" style="padding: .5rem .9rem;">
-                    <?php if ($sites): ?>
-                    <ul class="site-list">
-                        <?php foreach ($sites as $s): ?>
-                        <li>
-                            <a href="<?php echo qs(['sort' => $sort, 'q' => '', 'page' => 1]); ?>"><?php echo htmlspecialchars($s['site']); ?></a>
-                            <span class="cnt"><?php echo number_format($s['cnt']); ?></span>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php else: ?>
-                    <p class="empty">No data yet</p>
-                    <?php endif; ?>
-                </div>
+        <!-- Signups by site -->
+        <div class="card">
+            <div class="card-head">Signups by site</div>
+            <div class="card-body" style="padding: .5rem .9rem;">
+                <?php if ($sites): ?>
+                <ul class="site-list">
+                    <?php foreach ($sites as $s): ?>
+                    <li>
+                        <a href="<?php echo qs(['sort' => $sort, 'q' => '', 'page' => 1]); ?>"><?php echo htmlspecialchars($s['site']); ?></a>
+                        <span class="cnt"><?php echo number_format($s['cnt']); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php else: ?>
+                <p class="empty">No data yet</p>
+                <?php endif; ?>
             </div>
+        </div>
 
-            <!-- Most active sites (logins) -->
-            <div class="card">
-                <div class="card-head">Logins by site</div>
-                <div class="card-body" style="padding: .5rem .9rem;">
-                    <?php if ($active_sites): ?>
-                    <ul class="site-list">
-                        <?php foreach ($active_sites as $s): ?>
-                        <li>
-                            <span><?php echo htmlspecialchars($s['site']); ?></span>
-                            <span class="cnt"><?php echo number_format($s['cnt']); ?></span>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php else: ?>
-                    <p class="empty">No logins logged yet</p>
-                    <?php endif; ?>
-                </div>
+        <!-- Most active sites (logins) -->
+        <div class="card">
+            <div class="card-head">Logins by site</div>
+            <div class="card-body" style="padding: .5rem .9rem;">
+                <?php if ($active_sites): ?>
+                <ul class="site-list">
+                    <?php foreach ($active_sites as $s): ?>
+                    <li>
+                        <span><?php echo htmlspecialchars($s['site']); ?></span>
+                        <span class="cnt"><?php echo number_format($s['cnt']); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php else: ?>
+                <p class="empty">No logins logged yet</p>
+                <?php endif; ?>
             </div>
+        </div>
 
-            <!-- Recent signups -->
-            <div class="card">
-                <div class="card-head">Recent signups</div>
-                <div class="card-body" style="padding: .5rem .9rem;">
-                    <?php if ($recent): ?>
-                    <ul class="recent-list">
-                        <?php foreach ($recent as $r): ?>
-                        <li>
-                            <span><?php echo htmlspecialchars($r['username']); ?></span>
-                            <span class="meta"><?php echo ago($r['created_at']); ?> &middot; <?php echo htmlspecialchars($r['signup_site'] ?? '?'); ?></span>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <?php else: ?>
-                    <p class="empty">No users yet</p>
-                    <?php endif; ?>
-                </div>
+        <!-- Recent signups -->
+        <div class="card">
+            <div class="card-head">Recent signups</div>
+            <div class="card-body" style="padding: .5rem .9rem;">
+                <?php if ($recent): ?>
+                <ul class="recent-list">
+                    <?php foreach ($recent as $r): ?>
+                    <li>
+                        <span><?php echo htmlspecialchars($r['username']); ?></span>
+                        <span class="meta"><?php echo ago($r['created_at']); ?> &middot; <?php echo htmlspecialchars($r['signup_site'] ?? '?'); ?></span>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+                <?php else: ?>
+                <p class="empty">No users yet</p>
+                <?php endif; ?>
             </div>
+        </div>
 
-        </div><!-- .col-side -->
+    </div><!-- .side-panels -->
 
-        <div class="col-main">
             <div class="card">
                 <div class="card-head">
                     Users
@@ -523,14 +538,14 @@ tr:hover td { background: #fafbff; }
                     <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Username</th>
+                                <th><?php echo sortLink('id', 'id', 'id_desc', 'ID'); ?></th>
+                                <th><?php echo sortLink('username', 'username', 'username_desc', 'Username'); ?></th>
                                 <th>Email</th>
-                                <th>Verified</th>
-                                <th>Signed up</th>
-                                <th>Signup site</th>
-                                <th>Logins</th>
-                                <th>Last login</th>
+                                <th><?php echo sortLink('verified', 'verified', 'verified_asc', 'Verified'); ?></th>
+                                <th><?php echo sortLink('created', 'oldest', 'newest', 'Signed up'); ?></th>
+                                <th><?php echo sortLink('site', 'site', 'site_desc', 'Signup site'); ?></th>
+                                <th><?php echo sortLink('logins', 'logins', 'logins_asc', 'Logins'); ?></th>
+                                <th><?php echo sortLink('last_login', 'last_login', 'last_login_asc', 'Last login'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -606,9 +621,6 @@ tr:hover td { background: #fafbff; }
 
                 </div><!-- .card-body -->
             </div><!-- .card -->
-        </div><!-- .col-main -->
-
-    </div><!-- .cols -->
 
 </div><!-- .wrap -->
 </body>
