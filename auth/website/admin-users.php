@@ -219,7 +219,7 @@ function sortLink($column, $asc_key, $desc_key, $label) {
     $arrow = '';
     if ($sort === $asc_key) $arrow = ' &#9650;';
     elseif ($sort === $desc_key) $arrow = ' &#9660;';
-    return '<a href="' . qs(['sort' => $next, 'page' => 1]) . '">' . $label . $arrow . '</a>';
+    return '<a href="' . qs(['sort' => $next, 'page' => 1]) . '#users">' . $label . $arrow . '</a>';
 }
 ?>
 <!DOCTYPE html>
@@ -492,7 +492,7 @@ tr:hover td { background: #fafbff; }
 
     </div><!-- .side-panels -->
 
-            <div class="card">
+            <div class="card" id="users">
                 <div class="card-head">
                     Users
                     <span style="font-weight:400; color:#888; margin-left:.5rem;">(<?php echo number_format($total_users); ?> total)</span>
