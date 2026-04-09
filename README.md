@@ -1,5 +1,7 @@
 # Auth Server Repository
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/DirectSponsor/auth-server)
+
 This repository mirrors the PHP authentication stack that runs on `auth.directsponsor.org`. It intentionally keeps the **code** (`auth/website/`) and the **runtime data** (`data/`) separate so we can manage deployments safely while `syncthing` (or another sync tool) owns the live `/var/directsponsor-data` directory.
 
 ## Layout
@@ -90,8 +92,37 @@ tar -xzf hub-backup-*/userdata.tar.gz -C /
 `auth/website/admin-users.php` is a password-protected admin page at `https://auth.directsponsor.org/admin-users.php`. It shows:
 
 - Total users, new signups (7/30 day), email verification stats
+- **Active users** — distinct users who logged in within 7/30 days
+- **Never logged in** count — likely spam registrations
 - Signups broken down by which site the user first registered from
 - Login activity counts per site
 - Searchable, sortable, paginated user table with signup date, signup site, login count, and last login
+- **Filter dropdown** — filter by: all users, active (logged in), never logged in, unverified email
 
 The admin password is set via `define('ADMIN_PASSWORD', '...')` in `config.local.php` (never committed to git).
+
+## Spam protection
+
+Signup (`jwt-signup.php`) checks the registering IP against [Project Honeypot's HTTP:BL](https://www.projecthoneypot.org/httpbl_api.php) DNS blacklist before creating an account.
+
+- **How it works**: Fast DNS lookup against Honeypot's database — no HTTP calls, milliseconds per check
+- **Thresholds**: Blocks IPs with threat score ≥ 25, active within last 60 days, with a non-zero visitor type (suspicious/harvester/spammer)
+- **User experience**: Blocked users see a vague "not available" message; legitimate users are unaffected
+- **Logging**: Blocked attempts are logged to the server error log with IP and threat details
+- **Fail-safe**: If the API key is missing or DNS lookup fails, signups proceed normally
+
+### Configuration
+
+The API key is stored in `config.local.php` on the server (not in git):
+
+```php
+define('HTTPBL_API_KEY', 'your_key_here');
+```
+
+Get an API key at https://www.projecthoneypot.org/httpbl_configure.php
+
+To test the key is working:
+```bash
+ssh hub 'php -r "echo gethostbyname(\"YOUR_KEY.1.1.1.127.dnsbl.httpbl.org\");"'
+# Should return 127.1.1.1 (not the input string)
+```
