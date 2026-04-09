@@ -44,7 +44,11 @@ $allowed_redirects = [
     'https://faucetlist.org',
     'https://faucetlist.org/',
     'https://www.faucetlist.org',
-    'https://www.faucetlist.org/'
+    'https://www.faucetlist.org/',
+    'https://directsponsor.net',
+    'https://directsponsor.net/',
+    'https://www.directsponsor.net',
+    'https://www.directsponsor.net/'
 ];
 
 // Database connection function
@@ -123,6 +127,8 @@ function setCorsHeaders() {
         'https://www.satoshihost.top',
         'https://faucetlist.org',
         'https://www.faucetlist.org',
+        'https://directsponsor.net',
+        'https://www.directsponsor.net',
         'http://localhost',
         'https://satoshihost.ddns.net',
         'https://satoshihost.ddns.net/',

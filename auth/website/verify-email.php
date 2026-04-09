@@ -144,17 +144,22 @@ if ($token) {
         </div>
         
         <?php if ($verified): ?>
-            <a href="https://roflfaucet.com/" class="button">Go to RoflFaucet</a>
+            <p style="font-size:14px;color:#555;margin-bottom:24px;">Your account works across all three of our sites &mdash; choose where you&rsquo;d like to go:</p>
+            <div class="links">
+                <a href="https://directsponsor.net/" class="button">DirectSponsor</a>
+                <a href="https://roflfaucet.com/" class="button">RoflFaucet</a>
+                <a href="https://clickforcharity.xyz/" class="button">Click For Charity</a>
+            </div>
         <?php else: ?>
             <div class="links">
                 <a href="/resend-verification.php">Resend verification email</a>
             </div>
+            <div class="links">
+                <a href="https://directsponsor.net/">DirectSponsor</a> |
+                <a href="https://roflfaucet.com/">RoflFaucet</a> |
+                <a href="https://clickforcharity.xyz/">Click For Charity</a>
+            </div>
         <?php endif; ?>
-        
-        <div class="links">
-            <a href="https://roflfaucet.com/">RoflFaucet</a> | 
-            <a href="https://clickforcharity.xyz/">Click For Charity</a>
-        </div>
     </div>
 </body>
 </html>

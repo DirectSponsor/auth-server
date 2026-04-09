@@ -4,6 +4,47 @@ require_once 'email-helper.php';
 
 setCorsHeaders();
 
+/**
+ * Check an IP against Project Honeypot's HTTP:BL DNS blacklist.
+ * Returns false if the IP is clean, or an array with threat details if flagged.
+ * Requires HTTPBL_API_KEY defined in config.local.php.
+ */
+function checkHttpBL($ip) {
+    if (!defined('HTTPBL_API_KEY') || !HTTPBL_API_KEY) return false;
+
+    // Only check IPv4
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) return false;
+
+    // Skip private/reserved IPs
+    if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return false;
+
+    $reversed = implode('.', array_reverse(explode('.', $ip)));
+    $lookup   = HTTPBL_API_KEY . '.' . $reversed . '.dnsbl.httpbl.org';
+    $result   = gethostbyname($lookup);
+
+    // If lookup fails, gethostbyname returns the input string
+    if ($result === $lookup) return false;
+
+    $parts = explode('.', $result);
+    if ($parts[0] !== '127') return false;
+
+    $days_since = (int)$parts[1];  // days since last activity
+    $threat     = (int)$parts[2];  // threat score 0-255
+    $type       = (int)$parts[3];  // visitor type bitmask
+
+    // Block if threat score >= 25 and seen within last 60 days
+    // Type bitmask: 1=suspicious, 2=harvester, 4=comment spammer
+    if ($threat >= 25 && $days_since <= 60 && $type > 0) {
+        return [
+            'threat' => $threat,
+            'days'   => $days_since,
+            'type'   => $type
+        ];
+    }
+
+    return false;
+}
+
 // Start session for SSO
 session_start();
 
@@ -59,6 +100,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'Please enter a valid email address';
     } else {
+        // Check IP against Project Honeypot before anything else
+        $client_ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+        if (strpos($client_ip, ',') !== false) {
+            $client_ip = trim(explode(',', $client_ip)[0]);
+        }
+        $honeypot = checkHttpBL($client_ip);
+        if ($honeypot) {
+            error_log("Honeypot blocked signup from $client_ip: threat={$honeypot['threat']} type={$honeypot['type']}");
+            $error_message = 'Registration is not available at this time. Please try again later.';
+        }
+
+        if (!$error_message) {
         try {
             $db = getAuthDB();
             
@@ -169,6 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             error_log("Signup error: " . $e->getMessage());
             $error_message = 'Registration failed. Please try again.';
         }
+        } // end honeypot check
     }
 }
 
@@ -179,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DirectSponsor Signup</title>
+    <title>Sign Up &mdash; DirectSponsor &middot; RoflFaucet &middot; Click For Charity</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="favicon.ico">
     <style>
@@ -290,6 +344,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             text-decoration: underline;
         }
         
+        .sites-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: #999;
+        }
+        
+        .sites-footer a {
+            color: #999;
+            text-decoration: none;
+        }
+        
+        .sites-footer a:hover {
+            color: #667eea;
+            text-decoration: underline;
+        }
+        
         .password-hint {
             font-size: 0.85rem;
             color: #666;
@@ -300,8 +371,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
 <body>
     <div class="signup-container">
         <div class="signup-header">
-            <h1>🚀 Join DirectSponsor</h1>
-            <p>Create your account</p>
+            <h1>🚀 Create Account</h1>
+            <p>One account for DirectSponsor, RoflFaucet &amp; Click For Charity</p>
         </div>
         
         <?php if ($error_message): ?>
@@ -342,6 +413,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         
         <div class="login-link">
             Already have an account? <a href="jwt-login.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>">Sign in here</a>
+        </div>
+        <div class="sites-footer">
+            <a href="https://directsponsor.net/">DirectSponsor</a> &middot;
+            <a href="https://roflfaucet.com/">RoflFaucet</a> &middot;
+            <a href="https://clickforcharity.xyz/">Click For Charity</a>
         </div>
     </div>
 </body>

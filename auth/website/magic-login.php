@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic Link Login - DirectSponsor Authentication</title>
+    <title>Magic Link Login &mdash; DirectSponsor &middot; RoflFaucet &middot; Click For Charity</title>
     <style>
         * {
             box-sizing: border-box;

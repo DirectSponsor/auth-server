@@ -3,9 +3,6 @@ require_once 'config.php';
 
 setCorsHeaders();
 
-// Start session for SSO
-session_start();
-
 // Handle OPTIONS request for CORS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -33,19 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             $db = getAuthDB();
             
             // Get user from database
-            $stmt = $db->prepare("SELECT id, username, email, password_hash FROM users WHERE username = ?");
+            $stmt = $db->prepare("SELECT id, username, password_hash FROM users WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password_hash'])) {
-                // Set PHP session for SSO
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['email'] = $user['email'];
-                $_SESSION['expires'] = time() + (30 * 24 * 60 * 60); // 30 days
-                
-                logLoginEvent($db, $user['id'], siteFromRedirectUri($redirect_uri), 'password');
-                
                 // Create JWT token
                 global $jwt_issuer, $jwt_expiry;
                 
@@ -55,8 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
                     'iat' => $now,
                     'exp' => $now + $jwt_expiry,
                     'sub' => (string)$user['id'],
-                    'username' => $user['username'],
-                    'email' => $user['email']
+                    'username' => $user['username']
                 ];
                 
                 $jwt_token = createJWT($payload);
@@ -94,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login &mdash; DirectSponsor &middot; RoflFaucet &middot; Click For Charity</title>
+    <title>DirectSponsor Login</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="alternate icon" href="favicon.ico">
     <style>
@@ -202,30 +190,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         .signup-link a:hover {
             text-decoration: underline;
         }
-        
-        .sites-footer {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.8rem;
-            color: #999;
-        }
-        
-        .sites-footer a {
-            color: #999;
-            text-decoration: none;
-        }
-        
-        .sites-footer a:hover {
-            color: #667eea;
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>🔐 Shared Login</h1>
-            <p>One account for DirectSponsor, RoflFaucet &amp; Click For Charity</p>
+            <h1>🔐 DirectSponsor</h1>
+            <p>Sign in to continue</p>
         </div>
         
         <?php if ($error_message): ?>
@@ -249,31 +220,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
-                <div style="text-align: right; margin-top: 5px; font-size: 0.9em;">
-                    <a href="forgot-password.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>" style="color: #667eea; text-decoration: none;">Forgot Password?</a>
-                </div>
             </div>
             
             <button type="submit" class="login-button">Sign In</button>
         </form>
         
-        <div style="margin-top: 20px; text-align: center; border-bottom: 1px solid #eee; line-height: 0.1em; margin-bottom: 20px;">
-            <span style="background:#fff; padding:0 10px; color:#999; font-size: 0.9em;">OR</span>
-        </div>
-        
-        <div class="magic-link-section" style="text-align: center;">
-            <a href="magic-login.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>" style="display: inline-block; width: 100%; padding: 0.75rem; border: 2px solid #667eea; border-radius: 5px; color: #667eea; text-decoration: none; font-weight: 500; transition: all 0.2s; box-sizing: border-box;">
-                ✨ Log in with Magic Link
-            </a>
-        </div>
-        
         <div class="signup-link">
             Don't have an account? <a href="jwt-signup.php<?php echo $redirect_uri ? '?redirect_uri=' . urlencode($redirect_uri) : ''; ?>">Sign up here</a>
-        </div>
-        <div class="sites-footer">
-            <a href="https://directsponsor.net/">DirectSponsor</a> &middot;
-            <a href="https://roflfaucet.com/">RoflFaucet</a> &middot;
-            <a href="https://clickforcharity.xyz/">Click For Charity</a>
         </div>
     </div>
 </body>

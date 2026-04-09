@@ -72,12 +72,21 @@ if ($sort === 'oldest') {
 
 // Search
 $search = trim($_GET['q'] ?? '');
+$filter = $_GET['filter'] ?? '';
 $where  = '';
 $params = [];
+$having = '';
 if ($search !== '') {
-    $where    = 'WHERE u.username LIKE ? OR u.email LIKE ?';
+    $where    = 'WHERE (u.username LIKE ? OR u.email LIKE ?)';
     $params[] = '%' . $search . '%';
     $params[] = '%' . $search . '%';
+}
+if ($filter === 'active') {
+    $having = 'HAVING login_count > 0';
+} elseif ($filter === 'inactive') {
+    $having = 'HAVING login_count = 0';
+} elseif ($filter === 'unverified') {
+    $where .= ($where ? ' AND' : 'WHERE') . ' u.email_verified = 0';
 }
 
 // Pagination
@@ -85,7 +94,16 @@ $per_page    = 50;
 $page        = max(1, (int)($_GET['page'] ?? 1));
 $offset      = ($page - 1) * $per_page;
 
-$count_stmt = $db->prepare("SELECT COUNT(*) FROM users u $where");
+// For filtered counts, we need a subquery approach
+$count_sql = "SELECT COUNT(*) FROM (
+    SELECT u.id, COUNT(l.id) AS login_count
+    FROM users u
+    LEFT JOIN login_log l ON l.user_id = u.id
+    $where
+    GROUP BY u.id
+    $having
+) AS filtered";
+$count_stmt = $db->prepare($count_sql);
 $count_stmt->execute($params);
 $total_users = (int)$count_stmt->fetchColumn();
 $total_pages = max(1, (int)ceil($total_users / $per_page));
@@ -99,6 +117,7 @@ $users_stmt = $db->prepare("
     LEFT JOIN login_log l ON l.user_id = u.id
     $where
     GROUP BY u.id
+    $having
     $order_clause
     LIMIT $per_page OFFSET $offset
 ");
@@ -115,6 +134,31 @@ $stats_stmt = $db->query("
     FROM users
 ");
 $stats = $stats_stmt->fetch();
+
+// Active user stats (users who have actually logged in)
+$active_users_stmt = $db->query("
+    SELECT
+        COUNT(DISTINCT user_id) AS active_7d
+    FROM login_log
+    WHERE logged_in_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+");
+$active_7d = (int)$active_users_stmt->fetchColumn();
+
+$active_30d_stmt = $db->query("
+    SELECT
+        COUNT(DISTINCT user_id) AS active_30d
+    FROM login_log
+    WHERE logged_in_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+");
+$active_30d = (int)$active_30d_stmt->fetchColumn();
+
+// Users who never logged in (likely spam)
+$never_logged_stmt = $db->query("
+    SELECT COUNT(*) FROM users u
+    LEFT JOIN login_log l ON l.user_id = u.id
+    WHERE l.id IS NULL
+");
+$never_logged = (int)$never_logged_stmt->fetchColumn();
 
 // Signups per site
 $site_stmt = $db->query("
@@ -354,6 +398,18 @@ tr:hover td { background: #fafbff; }
             <div class="num"><?php echo number_format($stats['verified']); ?></div>
             <div class="lbl">Email verified</div>
         </div>
+        <div class="stat-card" style="border-left-color: #2e7d32;">
+            <div class="num"><?php echo number_format($active_7d); ?></div>
+            <div class="lbl">Active last 7 days</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #2e7d32;">
+            <div class="num"><?php echo number_format($active_30d); ?></div>
+            <div class="lbl">Active last 30 days</div>
+        </div>
+        <div class="stat-card" style="border-left-color: #c62828;">
+            <div class="num"><?php echo number_format($never_logged); ?></div>
+            <div class="lbl">Never logged in</div>
+        </div>
     </div>
 
     <!-- Side panels + main table -->
@@ -441,11 +497,23 @@ tr:hover td { background: #fafbff; }
                         <form method="GET" action="">
                             <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>">
                             <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                             <select name="sort" onchange="this.form.submit()">
                                 <option value="newest"   <?php if ($sort==='newest')   echo 'selected'; ?>>Newest first</option>
                                 <option value="oldest"   <?php if ($sort==='oldest')   echo 'selected'; ?>>Oldest first</option>
                                 <option value="username" <?php if ($sort==='username') echo 'selected'; ?>>Username A–Z</option>
                                 <option value="site"     <?php if ($sort==='site')     echo 'selected'; ?>>Signup site</option>
+                            </select>
+                        </form>
+                        <form method="GET" action="">
+                            <input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>">
+                            <input type="hidden" name="sort" value="<?php echo htmlspecialchars($sort); ?>">
+                            <input type="hidden" name="page" value="1">
+                            <select name="filter" onchange="this.form.submit()">
+                                <option value=""          <?php if ($filter==='')           echo 'selected'; ?>>All users</option>
+                                <option value="active"    <?php if ($filter==='active')     echo 'selected'; ?>>Active (logged in)</option>
+                                <option value="inactive"  <?php if ($filter==='inactive')   echo 'selected'; ?>>Never logged in</option>
+                                <option value="unverified" <?php if ($filter==='unverified') echo 'selected'; ?>>Unverified email</option>
                             </select>
                         </form>
                     </div>
