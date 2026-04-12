@@ -63,8 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
                 
                 // Redirect with JWT token
                 if ($redirect_uri) {
-                    $separator = strpos($redirect_uri, '?') !== false ? '&' : '?';
-                    $redirect_url = $redirect_uri . $separator . 'jwt=' . urlencode($jwt_token);
+                    // Split off any fragment (#) so ?jwt= is placed before it
+                    $fragment = '';
+                    $base_uri = $redirect_uri;
+                    if (($hash_pos = strpos($redirect_uri, '#')) !== false) {
+                        $fragment = substr($redirect_uri, $hash_pos);
+                        $base_uri = substr($redirect_uri, 0, $hash_pos);
+                    }
+                    $separator = strpos($base_uri, '?') !== false ? '&' : '?';
+                    $redirect_url = $base_uri . $separator . 'jwt=' . urlencode($jwt_token) . $fragment;
                     header("Location: $redirect_url");
                     exit;
                 } else {
@@ -273,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         <div class="sites-footer">
             <a href="https://directsponsor.net/">DirectSponsor</a> &middot;
             <a href="https://roflfaucet.com/">RoflFaucet</a> &middot;
-            <a href="https://clickforcharity.xyz/">Click For Charity</a>
+            <a href="https://clickforcharity.net/">Click For Charity</a>
         </div>
     </div>
 </body>
