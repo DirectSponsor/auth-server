@@ -148,7 +148,7 @@ if ($token) {
             <div class="links">
                 <a href="https://directsponsor.net/" class="button">DirectSponsor</a>
                 <a href="https://roflfaucet.com/" class="button">RoflFaucet</a>
-                <a href="https://clickforcharity.xyz/" class="button">Click For Charity</a>
+                <a href="https://clickforcharity.net/" class="button">Click For Charity</a>
             </div>
         <?php else: ?>
             <div class="links">
@@ -157,7 +157,7 @@ if ($token) {
             <div class="links">
                 <a href="https://directsponsor.net/">DirectSponsor</a> |
                 <a href="https://roflfaucet.com/">RoflFaucet</a> |
-                <a href="https://clickforcharity.xyz/">Click For Charity</a>
+                <a href="https://clickforcharity.net/">Click For Charity</a>
             </div>
         <?php endif; ?>
     </div>
