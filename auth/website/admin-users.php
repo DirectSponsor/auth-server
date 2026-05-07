@@ -1,22 +1,47 @@
 <?php
 require_once 'config.php';
 
-// --- Simple admin authentication ---
-// Set ADMIN_PASSWORD in config.local.php as: define('ADMIN_PASSWORD', 'yourpassword');
-// Falls back to a hard-coded env check if not defined.
-if (!defined('ADMIN_PASSWORD')) {
-    define('ADMIN_PASSWORD', 'changeme');
+// --- Admin authentication ---
+// Set ADMIN_PASSWORD in config.local.php
+if (!defined('ADMIN_PASSWORD')) { define('ADMIN_PASSWORD', 'changeme'); }
+
+// Brute force protection: IP-based fail counter stored in a temp file
+define('ADMIN_MAX_FAILS', 5);
+define('ADMIN_LOCKOUT_SECS', 900); // 15 minutes
+
+function admin_lock_file() {
+    return sys_get_temp_dir() . '/ds_adm_' . md5(($_SERVER['REMOTE_ADDR'] ?? 'x')) . '.json';
 }
+function admin_is_locked() {
+    $f = admin_lock_file();
+    if (!file_exists($f)) return false;
+    $d = @json_decode(file_get_contents($f), true);
+    return ($d && isset($d['until']) && $d['until'] > time()) ? $d['until'] : false;
+}
+function admin_record_fail() {
+    $f = admin_lock_file();
+    $d = @json_decode(@file_get_contents($f), true) ?: ['fails' => 0];
+    $d['fails'] = ($d['fails'] ?? 0) + 1;
+    $d['last']  = time();
+    if ($d['fails'] >= ADMIN_MAX_FAILS) { $d['until'] = time() + ADMIN_LOCKOUT_SECS; }
+    file_put_contents($f, json_encode($d), LOCK_EX);
+}
+function admin_clear_lock() { @unlink(admin_lock_file()); }
 
 session_start();
 
 $auth_error = '';
 
 if (isset($_POST['admin_password'])) {
-    if ($_POST['admin_password'] === ADMIN_PASSWORD) {
+    $locked_until = admin_is_locked();
+    if ($locked_until) {
+        $auth_error = 'Too many failed attempts. Try again in ' . ceil(($locked_until - time()) / 60) . ' minute(s).';
+    } elseif ($_POST['admin_password'] === ADMIN_PASSWORD) {
         $_SESSION['admin_authed'] = true;
+        admin_clear_lock();
     } else {
-        $auth_error = 'Wrong password.';
+        admin_record_fail();
+        $auth_error = 'Wrong credentials.';
     }
 }
 
@@ -78,6 +103,23 @@ $sort_map = [
 ];
 $order_clause = $sort_map[$sort] ?? $sort_map['newest'];
 
+// Balance sort needs PHP-side sorting (balances live in flat files, not the DB)
+$balance_sort = in_array($sort, ['balance', 'balance_asc']);
+
+// Load all balances from flat files into a uid => balance map
+$balances = [];
+$balance_dir = '/var/directsponsor-data/userdata/balances';
+if (is_dir($balance_dir)) {
+    foreach (glob($balance_dir . '/*.txt') as $bf) {
+        $uid = (int)strtok(basename($bf, '.txt'), '-');
+        if ($uid > 0) {
+            $bdata = @json_decode(file_get_contents($bf), true);
+            $bal = $bdata['balance'] ?? 0;
+            $balances[$uid] = is_array($bal) ? (float)($bal['coins'] ?? 0) : (float)$bal;
+        }
+    }
+}
+
 // Search
 $search = trim($_GET['q'] ?? '');
 $filter = $_GET['filter'] ?? '';
@@ -116,21 +158,48 @@ $count_stmt->execute($params);
 $total_users = (int)$count_stmt->fetchColumn();
 $total_pages = max(1, (int)ceil($total_users / $per_page));
 
-$users_stmt = $db->prepare("
-    SELECT u.id, u.username, u.email, u.email_verified,
-           u.created_at, u.signup_site,
-           COUNT(l.id) AS login_count,
-           MAX(l.logged_in_at) AS last_login
-    FROM users u
-    LEFT JOIN login_log l ON l.user_id = u.id
-    $where
-    GROUP BY u.id
-    $having
-    $order_clause
-    LIMIT $per_page OFFSET $offset
-");
-$users_stmt->execute($params);
-$users = $users_stmt->fetchAll();
+if ($balance_sort) {
+    // Fetch all matching users (no LIMIT), sort by balance in PHP, then slice
+    $users_stmt = $db->prepare("
+        SELECT u.id, u.username, u.email, u.email_verified,
+               u.created_at, u.signup_site,
+               COUNT(l.id) AS login_count,
+               MAX(l.logged_in_at) AS last_login
+        FROM users u
+        LEFT JOIN login_log l ON l.user_id = u.id
+        $where
+        GROUP BY u.id
+        $having
+    ");
+    $users_stmt->execute($params);
+    $all = $users_stmt->fetchAll();
+    foreach ($all as &$u) { $u['balance'] = $balances[(int)$u['id']] ?? 0; }
+    unset($u);
+    usort($all, function($a, $b) use ($sort) {
+        return $sort === 'balance'
+            ? $b['balance'] <=> $a['balance']
+            : $a['balance'] <=> $b['balance'];
+    });
+    $users = array_slice($all, $offset, $per_page);
+} else {
+    $users_stmt = $db->prepare("
+        SELECT u.id, u.username, u.email, u.email_verified,
+               u.created_at, u.signup_site,
+               COUNT(l.id) AS login_count,
+               MAX(l.logged_in_at) AS last_login
+        FROM users u
+        LEFT JOIN login_log l ON l.user_id = u.id
+        $where
+        GROUP BY u.id
+        $having
+        $order_clause
+        LIMIT $per_page OFFSET $offset
+    ");
+    $users_stmt->execute($params);
+    $users = $users_stmt->fetchAll();
+    foreach ($users as &$u) { $u['balance'] = $balances[(int)$u['id']] ?? 0; }
+    unset($u);
+}
 
 // Summary stats
 $stats_stmt = $db->query("
@@ -514,10 +583,12 @@ tr:hover td { background: #fafbff; }
                             <input type="hidden" name="page" value="1">
                             <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                             <select name="sort" onchange="this.form.submit()">
-                                <option value="newest"   <?php if ($sort==='newest')   echo 'selected'; ?>>Newest first</option>
-                                <option value="oldest"   <?php if ($sort==='oldest')   echo 'selected'; ?>>Oldest first</option>
-                                <option value="username" <?php if ($sort==='username') echo 'selected'; ?>>Username A–Z</option>
-                                <option value="site"     <?php if ($sort==='site')     echo 'selected'; ?>>Signup site</option>
+                                <option value="newest"       <?php if ($sort==='newest')       echo 'selected'; ?>>Newest first</option>
+                                <option value="oldest"       <?php if ($sort==='oldest')       echo 'selected'; ?>>Oldest first</option>
+                                <option value="username"     <?php if ($sort==='username')     echo 'selected'; ?>>Username A–Z</option>
+                                <option value="site"         <?php if ($sort==='site')         echo 'selected'; ?>>Signup site</option>
+                                <option value="balance"      <?php if ($sort==='balance')      echo 'selected'; ?>>Highest balance</option>
+                                <option value="balance_asc"  <?php if ($sort==='balance_asc')  echo 'selected'; ?>>Lowest balance</option>
                             </select>
                         </form>
                         <form method="GET" action="">
@@ -540,11 +611,11 @@ tr:hover td { background: #fafbff; }
                             <tr>
                                 <th><?php echo sortLink('id', 'id', 'id_desc', 'ID'); ?></th>
                                 <th><?php echo sortLink('username', 'username', 'username_desc', 'Username'); ?></th>
-                                <th>Email</th>
                                 <th><?php echo sortLink('verified', 'verified', 'verified_asc', 'Verified'); ?></th>
                                 <th><?php echo sortLink('created', 'oldest', 'newest', 'Signed up'); ?></th>
                                 <th><?php echo sortLink('site', 'site', 'site_desc', 'Signup site'); ?></th>
                                 <th><?php echo sortLink('logins', 'logins', 'logins_asc', 'Logins'); ?></th>
+                                <th style="text-align:right;"><?php echo sortLink('balance', 'balance', 'balance_asc', 'Balance'); ?></th>
                                 <th><?php echo sortLink('last_login', 'last_login', 'last_login_asc', 'Last login'); ?></th>
                             </tr>
                         </thead>
@@ -554,7 +625,6 @@ tr:hover td { background: #fafbff; }
                             <tr>
                                 <td><?php echo (int)$u['id']; ?></td>
                                 <td><?php echo htmlspecialchars($u['username']); ?></td>
-                                <td style="color:#555;"><?php echo htmlspecialchars($u['email']); ?></td>
                                 <td>
                                     <?php if ($u['email_verified']): ?>
                                         <span class="badge badge-ok">yes</span>
@@ -573,6 +643,7 @@ tr:hover td { background: #fafbff; }
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo (int)$u['login_count']; ?></td>
+                                <td style="text-align:right; font-variant-numeric:tabular-nums;"><?php echo number_format($u['balance'] ?? 0, 0); ?></td>
                                 <td style="white-space:nowrap; color:#666;" title="<?php echo htmlspecialchars($u['last_login'] ?? ''); ?>">
                                     <?php echo ago($u['last_login']); ?>
                                 </td>

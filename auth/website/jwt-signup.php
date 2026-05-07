@@ -99,6 +99,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         $error_message = 'Password must be at least 8 characters';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error_message = 'Please enter a valid email address';
+    } elseif (in_array(strtolower($username), ['admin', 'administrator', 'root', 'system', 'moderator', 'mod', 'staff', 'support', 'superuser', 'sysadmin', 'webmaster'])) {
+        $error_message = 'That username is not available';
     } else {
         // Check IP against Project Honeypot before anything else
         $client_ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
