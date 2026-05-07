@@ -419,7 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
         <div class="sites-footer">
             <a href="https://directsponsor.net/">DirectSponsor</a> &middot;
             <a href="https://roflfaucet.com/">RoflFaucet</a> &middot;
-            <a href="https://clickforcharity.xyz/">Click For Charity</a>
+            <a href="https://clickforcharity.net/">Click For Charity</a>
         </div>
     </div>
 </body>
