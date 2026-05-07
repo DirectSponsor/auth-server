@@ -226,6 +226,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             color: #667eea;
             text-decoration: underline;
         }
+        .dev-notice {
+            margin-top: 1.2rem;
+            padding: .65rem .9rem;
+            background: #f5f3ff;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            font-size: .8rem;
+            color: #555;
+            line-height: 1.5;
+        }
+        .dev-notice a { color: #667eea; text-decoration: none; }
+        .dev-notice a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -281,6 +293,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
             <a href="https://directsponsor.net/">DirectSponsor</a> &middot;
             <a href="https://roflfaucet.com/">RoflFaucet</a> &middot;
             <a href="https://clickforcharity.net/">Click For Charity</a>
+        </div>
+        <div class="dev-notice">
+            🚧 Still in early development &mdash; if you&rsquo;re here, thank you! Your visits really do matter. New features are being added all the time. <a href="changelog.php">See what&rsquo;s new &rarr;</a>
         </div>
     </div>
 </body>
