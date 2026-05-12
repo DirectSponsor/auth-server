@@ -112,6 +112,9 @@ if ($token) {
         .links a:hover {
             text-decoration: underline;
         }
+        .links a.button {
+            color: white;
+        }
         button, .button {
             display: inline-block;
             padding: 12px 24px;
