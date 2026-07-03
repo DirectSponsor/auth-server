@@ -22,7 +22,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Shared secret — only our own servers may call this
+$_secret_file = '/etc/ds-balance-secret';
+if (!file_exists($_secret_file)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Balance secret not configured on server']);
+    exit;
+}
+define('BALANCE_SECRET', trim(file_get_contents($_secret_file)));
+
 $input = json_decode(file_get_contents('php://input'), true);
+
+if (($input['secret'] ?? '') !== BALANCE_SECRET) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Forbidden']);
+    exit;
+}
 
 if (!isset($input['user_id']) || !isset($input['amount'])) {
     http_response_code(400);
