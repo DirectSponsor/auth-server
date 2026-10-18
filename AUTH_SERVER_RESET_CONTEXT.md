@@ -61,7 +61,10 @@ Logic for this exists in `forgot-password.php` and `reset-password.php` but seem
     - Generates 5-minute token.
     - Sends email with magic link.
     - User clicks link -> `verify-magic.php` -> invalidates token -> logs user in -> redirects to `redirect_uri`.
-    - **Robustness:** Stores `redirect_uri` in session to ensure correct redirection after email round-trip.
+    - **Robustness:** `redirect_uri` is embedded in the emailed link itself (`verify-magic.php?token=…&redirect_uri=…`, validated against `$allowed_redirects`), so it survives the link being opened in a different browser/mail client. Session value is kept as a fallback; final default is `https://directsponsor.net/`.
+
+### Fixes (Oct 2026)
+- **Token expiry timezone bug (all token flows):** expiry timestamps were written with PHP `date()` (PHP runs UTC) but verified with MySQL `NOW()` (server clock, BST during summer) — every magic/reset/verification link was stored ~1h expired during BST. Fixed by computing expiry DB-side: `magic_token_expires = DATE_ADD(NOW(), INTERVAL …)`. **Rule: never mix PHP `date()`/`time()` with MySQL `NOW()` on this server — do all comparisons on one clock.**
 
 ### 3. Database Schema
 - Added `magic_token` and `magic_token_expires` to `users` table via SSH.
