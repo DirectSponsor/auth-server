@@ -54,7 +54,7 @@ try {
         
         // Redirect: URI embedded in the emailed link wins (survives the link
         // being opened in a different browser), then session, then default
-        $redirect_url = "https://roflfaucet.com/"; 
+        $redirect_url = "https://directsponsor.net/"; 
         $link_redirect = $_GET['redirect_uri'] ?? '';
         if ($link_redirect && validateRedirectUri($link_redirect)) {
             $redirect_url = $link_redirect;
