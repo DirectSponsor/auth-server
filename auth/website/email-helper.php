@@ -288,8 +288,11 @@ function checkRateLimit($email, $type = 'reset', $maxAttempts = 3, $timeWindow =
 /**
  * Send magic link login email
  */
-function sendMagicLinkEmail($email, $username, $token) {
+function sendMagicLinkEmail($email, $username, $token, $redirectUri = '') {
     $magicLink = SITE_URL . "/verify-magic.php?token=" . urlencode($token);
+    if ($redirectUri && function_exists('validateRedirectUri') && validateRedirectUri($redirectUri)) {
+        $magicLink .= "&redirect_uri=" . urlencode($redirectUri);
+    }
     
     $subject = "Login to " . SITE_NAME;
     

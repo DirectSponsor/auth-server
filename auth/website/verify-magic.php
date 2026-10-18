@@ -4,6 +4,12 @@ require_once 'config.php';
 $token = $_GET['token'] ?? '';
 $error_message = '';
 
+$retry_link = 'magic-login.php';
+$rp = $_GET['redirect_uri'] ?? '';
+if ($rp && validateRedirectUri($rp)) {
+    $retry_link .= '?redirect_uri=' . urlencode($rp);
+}
+
 if (!$token) {
     die('Invalid token');
 }
@@ -46,9 +52,13 @@ try {
         
         $jwt_token = createJWT($payload);
         
-        // Default redirect
+        // Redirect: URI embedded in the emailed link wins (survives the link
+        // being opened in a different browser), then session, then default
         $redirect_url = "https://roflfaucet.com/"; 
-        if (isset($_SESSION['login_redirect_uri'])) {
+        $link_redirect = $_GET['redirect_uri'] ?? '';
+        if ($link_redirect && validateRedirectUri($link_redirect)) {
+            $redirect_url = $link_redirect;
+        } elseif (isset($_SESSION['login_redirect_uri'])) {
              $redirect_url = $_SESSION['login_redirect_uri'];
              unset($_SESSION['login_redirect_uri']);
         }
@@ -100,7 +110,7 @@ try {
     <div class="container">
         <h1>Login Failed</h1>
         <p><?php echo htmlspecialchars($error_message); ?></p>
-        <p><a href="magic-login.php">Try again</a></p>
+        <p><a href="<?php echo htmlspecialchars($retry_link); ?>">Try again</a></p>
     </div>
 </body>
 </html>

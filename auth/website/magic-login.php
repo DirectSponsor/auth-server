@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_id'])) {
                     $stmt->execute([$token, $user['id']]);
                     
                     // Send email
-                    if (sendMagicLinkEmail($user['email'], $user['username'], $token)) {
+                    if (sendMagicLinkEmail($user['email'], $user['username'], $token, $redirect_uri)) {
                         $message = 'We sent a login link to your email. Click it to log in instantly!';
                         $message_type = 'success';
                     } else {
