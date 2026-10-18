@@ -133,13 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
                     $user_id = getNextUserId($db);
                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                     
-                    // Generate verification token
+                    // Generate verification token (expiry set DB-side so it uses the same clock as the NOW() check in verify-email.php)
                     $verification_token = generateToken();
-                    $token_expires = date('Y-m-d H:i:s', time() + VERIFICATION_TOKEN_EXPIRY);
                     
                     $signup_site = siteFromRedirectUri($redirect_uri);
-                    $stmt = $db->prepare("INSERT INTO users (id, username, password_hash, email, email_verified, verification_token, verification_token_expires, signup_site) VALUES (?, ?, ?, ?, 1, ?, ?, ?)");
-                    $stmt->execute([$user_id, $username, $hashed_password, $email, $verification_token, $token_expires, $signup_site]);
+                    $stmt = $db->prepare("INSERT INTO users (id, username, password_hash, email, email_verified, verification_token, verification_token_expires, signup_site) VALUES (?, ?, ?, ?, 1, ?, DATE_ADD(NOW(), INTERVAL " . (int)VERIFICATION_TOKEN_EXPIRY . " SECOND), ?)");
+                    $stmt->execute([$user_id, $username, $hashed_password, $email, $verification_token, $signup_site]);
                     
                     // Create initial user data files
                     $user_identifier = $user_id . '-' . $username;

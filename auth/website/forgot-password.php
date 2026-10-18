@@ -39,13 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'])) {
                 $user = $stmt->fetch();
                 
                 if ($user) {
-                    // Generate reset token
+                    // Generate reset token (expiry set DB-side so it uses the same clock as the NOW() check in reset-password.php)
                     $token = generateToken();
-                    $expires = date('Y-m-d H:i:s', time() + RESET_TOKEN_EXPIRY);
                     
                     // Store token in database
-                    $stmt = $db->prepare("UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE id = ?");
-                    $stmt->execute([$token, $expires, $user['id']]);
+                    $stmt = $db->prepare("UPDATE users SET reset_token = ?, reset_token_expires = DATE_ADD(NOW(), INTERVAL " . (int)RESET_TOKEN_EXPIRY . " SECOND) WHERE id = ?");
+                    $stmt->execute([$token, $user['id']]);
                     
                     // Send email
                     if (sendPasswordResetEmail($user['email'], $user['username'], $token)) {

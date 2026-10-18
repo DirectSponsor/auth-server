@@ -49,13 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_id'])) {
                 }
                 
                 if ($user) {
-                    // Generate magic token
+                    // Generate magic token (expiry set DB-side so it uses the same clock as the NOW() check in verify-magic.php)
                     $token = generateToken();
-                    $expires = date('Y-m-d H:i:s', time() + 300); // 5 minutes expiry
                     
                     // Store token in database
-                    $stmt = $db->prepare("UPDATE users SET magic_token = ?, magic_token_expires = ? WHERE id = ?");
-                    $stmt->execute([$token, $expires, $user['id']]);
+                    $stmt = $db->prepare("UPDATE users SET magic_token = ?, magic_token_expires = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ?");
+                    $stmt->execute([$token, $user['id']]);
                     
                     // Send email
                     if (sendMagicLinkEmail($user['email'], $user['username'], $token)) {

@@ -24,9 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                 
                 if ($user && !$user['email_verified']) {
                     $token = generateToken();
-                    $expires = date('Y-m-d H:i:s', time() + VERIFICATION_TOKEN_EXPIRY);
-                    $stmt = $db->prepare("UPDATE users SET verification_token = ?, verification_token_expires = ? WHERE id = ?");
-                    $stmt->execute([$token, $expires, $user['id']]);
+                    $stmt = $db->prepare("UPDATE users SET verification_token = ?, verification_token_expires = DATE_ADD(NOW(), INTERVAL " . (int)VERIFICATION_TOKEN_EXPIRY . " SECOND) WHERE id = ?");
+                    $stmt->execute([$token, $user['id']]);
                     
                     if (sendVerificationEmail($user['email'], $user['username'], $token)) {
                         $message = 'Verification email sent! Please check your inbox.';
