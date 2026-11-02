@@ -78,11 +78,23 @@ verifying). Other sites' delete buttons same — no token passing needed.
       to the past → run `php /root/process-deletions.php` → files land
       in `.trash/`
 
-## Follow-up (not built)
+## Follow-up — agreed design, TODO (not built)
 
-- **Cross-site data**: this covers auth-server data only (`/var/directsponsor-data`).
-  Site-local data (`/var/roflfaucet-data`, `/var/clickforcharity-data`) needs
-  either a marker endpoint sites poll, or per-site delete APIs. Design when
-  implementing.
+- **Cross-site data removal (pull model).** Auth server publishes completed
+  deletions; each site polls and cleans its own data dir. The completed
+  `.deletion-requests/{userId}.json` files ARE the list — no new state:
+  - `api/deleted-users.php?since=TS` → scan `.deletion-requests/`, return
+    `[{user_id, completed_at}]` for `status=completed`. Guard with a shared
+    secret (`/etc/ds-*` pattern like `update_balance.php`) — the deleted-user
+    list is semi-sensitive.
+  - Per-site daily cron: fetch `?since=<last_seen>` → for each user_id,
+    trash/delete that site's own files (`/var/roflfaucet-data`,
+    `/var/clickforcharity-data`, `/var/directsponsor-data`…) → store last-seen
+    timestamp locally. Sites never delete list entries — pull model means a
+    down site just catches up. (~40-line endpoint + ~50-line site script.)
+  - Note: a site down longer than the record retention would miss a deletion —
+    keep completed request files indefinitely (they're tiny).
+  - Why pull not push: no per-site authed endpoints or retry logic needed;
+    same cron+secret pattern as the rest of the stack.
 - **Login blocking during grace**: currently a pending user can still sign in.
   Optional: check `.deletion-requests/` at login and suspend.
