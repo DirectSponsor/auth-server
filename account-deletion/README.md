@@ -1,11 +1,16 @@
 # Account Deletion Feature — rebuilt with auth + grace period
 
-**Status (2026-11-02): DEPLOYED to es3-auth, pending user testing.** Live at
-`https://auth.directsponsor.org/delete-account.php` — page + 3 APIs + daily cron
-all verified responding (page shows "Not signed in" without auth; APIs 401
-correctly). Cron dry-run already purged the Nov-2025 test trash. Strays removed
-from `/var/www/html/`. **roflfaucet button updated** in `site/profile.html`
-(needs `deploy.sh` to reach users).
+**Status (2026-11-02): DEPLOYED to es3-auth, tested end-to-end.** Live at
+`https://auth.directsponsor.org/delete-account.php`. Andy confirmed working:
+request → email notice arrives (with cancel link) → cancel option on page.
+Cron installed (05:20 UTC daily); dry-run already purged the Nov-2025 test
+trash. Strays removed from `/var/www/html/`.
+
+**Site links (all just plain links — auth-domain session verifies):**
+- roflfaucet `profile.html` — deployed ✅
+- clickforcharity `profile.html` user dropdown — committed, needs deploy.sh
+- directsponsor `social-layout-start.incl` → Account dropdown on ALL pages —
+  committed, needs `deploy.sh --auto`
 
 `roflfaucet.com`'s profile page has a live "Delete My Account Data" button that
 redirects to `auth.directsponsor.org/delete-account.html?user_id=...` — which
