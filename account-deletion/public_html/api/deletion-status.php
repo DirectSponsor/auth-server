@@ -22,14 +22,14 @@ if ($token === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $input['token'] ?? '';
 }
 
-$payload = deletionVerifyJWT($token);
-if (!$payload) {
+$auth = deletionAuthenticate($token);
+if (!$auth) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid or expired token']);
+    echo json_encode(['error' => 'Not signed in']);
     exit;
 }
 
-$request = deletionLoadRequest($payload['sub']);
+$request = deletionLoadRequest($auth['user_id']);
 
 if (!$request) {
     echo json_encode(['status' => 'none']);

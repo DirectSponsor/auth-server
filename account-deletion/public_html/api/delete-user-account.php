@@ -30,14 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$payload = deletionVerifyJWT($input['token'] ?? '');
-if (!$payload) {
+$auth = deletionAuthenticate($input['token'] ?? '');
+if (!$auth) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid or expired token']);
+    echo json_encode(['error' => 'Not signed in']);
     exit;
 }
+deletionCheckOrigin();
 
-$userId = $payload['sub'];
+$userId = $auth['user_id'];
 
 // Already pending? Just report the existing schedule.
 $existing = deletionLoadRequest($userId);
@@ -62,7 +63,7 @@ if (!is_dir(DELETION_REQUESTS_DIR)) {
 
 $request = [
     'user_id' => $userId,
-    'username' => $payload['username'] ?? '',
+    'username' => $auth['username'],
     'requested_at' => time(),
     'execute_at' => time() + (DELETION_GRACE_DAYS * 86400),
     'status' => 'pending',
@@ -76,7 +77,7 @@ if (!file_put_contents(deletionRequestPath($userId), json_encode($request, JSON_
 
 // Email the account owner — this is the real safety net for unauthorized
 // requests: the actual owner gets told and can cancel.
-$email = $payload['email'] ?? '';
+$email = $auth['email'];
 if ($email) {
     $date = date('Y-m-d', $request['execute_at']);
     sendEmail(

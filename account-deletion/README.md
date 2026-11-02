@@ -1,6 +1,11 @@
 # Account Deletion Feature — rebuilt with auth + grace period
 
-**Status (2026-11-02): rewritten, staged here, NOT yet deployed/tested.**
+**Status (2026-11-02): DEPLOYED to es3-auth, pending user testing.** Live at
+`https://auth.directsponsor.org/delete-account.php` — page + 3 APIs + daily cron
+all verified responding (page shows "Not signed in" without auth; APIs 401
+correctly). Cron dry-run already purged the Nov-2025 test trash. Strays removed
+from `/var/www/html/`. **roflfaucet button updated** in `site/profile.html`
+(needs `deploy.sh` to reach users).
 
 `roflfaucet.com`'s profile page has a live "Delete My Account Data" button that
 redirects to `auth.directsponsor.org/delete-account.html?user_id=...` — which
@@ -27,10 +32,13 @@ The `moveToTrash`/`restoreFromTrash` mechanics were sound and are reused.
 
 Request-based with a **7-day grace period** — nothing deletes on click:
 
-1. `delete-account.php` — page, verifies `?token=<jwt>` server-side (same
-   pattern as `change-password.php`). Shows current state: schedule a
-   deletion, or cancel a pending one. `user_id` only ever comes from the
-   verified JWT `sub` claim, sanitized `^[a-zA-Z0-9_-]+$`.
+1. `delete-account.php` — page. Authenticates via the **PHP session on the
+   auth domain** (set by `jwt-login.php`/`verify-magic.php` at login — most
+   users already have one) or `?token=`/`?jwt=` JWT fallback. Shows current
+   state: schedule a deletion, or cancel a pending one. `user_id` only ever
+   comes from the verified session/JWT `sub` claim, sanitized
+   `^[a-zA-Z0-9_-]+$`. Session-authed POSTs get an Origin check (CSRF);
+   JWT-authed calls are CSRF-immune by nature.
 2. `api/delete-user-account.php` — POST `{token}` → writes
    `userdata/.deletion-requests/{userId}.json` `{status: pending,
    execute_at: now+7d}` and emails the account owner (the real "angry
@@ -51,25 +59,24 @@ Request-based with a **7-day grace period** — nothing deletes on click:
 | `public_html/includes/trash_system.php`, `deletion-auth.php` | `…/public_html/includes/` |
 | `cron/process-deletions.php` | `/root/process-deletions.php` (absolute include paths — not under docroot) |
 
-Cron on es3-auth (root):
+Cron on es3-auth (root) — installed:
 ```
 20 5 * * * /usr/bin/php /root/process-deletions.php >> /var/log/process-deletions.log 2>&1
 ```
 
-**Callers must be updated**: the roflfaucet button currently sends
-`?user_id=` — must send `?token=<jwt>` instead (same pattern as the
-change-password link in `profile-security-section-updated.html`, which is
-already the reference). Other sites' delete buttons same.
+**Callers**: roflfaucet's button now just links to
+`delete-account.php?return_url=...` (the auth-domain session does the
+verifying). Other sites' delete buttons same — no token passing needed.
 
-## Before deploying
+## Test checklist (Andy, disposable account)
 
-- [ ] Test JWT verify against a real token (expired/bad sig → 401)
-- [ ] Create throwaway account → request → confirm email arrives → cancel → request gone
-- [ ] Re-request → let cron run (or set execute_at past) → files land in `.trash/`
-- [ ] Remove server strays: `/var/www/html/delete-account.html`,
-      `/var/www/html/includes/trash_system.php`, `/var/www/html/api/` if present
-- [ ] Old stray `delete-user-account.php` (unauthenticated) must NEVER be
-      deployed — it's in git history only for reference
+- [ ] Sign in on roflfaucet → profile → Delete button → lands on
+      delete-account.php already authenticated → request → confirm the
+      email arrives → cancel from the same page → request gone
+- [ ] Re-request → set `execute_at` in the request file
+      (`/var/directsponsor-data/userdata/.deletion-requests/{id}.json`)
+      to the past → run `php /root/process-deletions.php` → files land
+      in `.trash/`
 
 ## Follow-up (not built)
 

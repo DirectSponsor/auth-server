@@ -25,14 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
-$payload = deletionVerifyJWT($input['token'] ?? '');
-if (!$payload) {
+$auth = deletionAuthenticate($input['token'] ?? '');
+if (!$auth) {
     http_response_code(401);
-    echo json_encode(['error' => 'Invalid or expired token']);
+    echo json_encode(['error' => 'Not signed in']);
     exit;
 }
+deletionCheckOrigin();
 
-$userId = $payload['sub'];
+$userId = $auth['user_id'];
 $request = deletionLoadRequest($userId);
 
 if (!$request || $request['status'] !== 'pending') {

@@ -10,15 +10,15 @@
 require_once 'config.php';
 require_once 'includes/deletion-auth.php';
 
-$token = $_GET['token'] ?? '';
+$token = $_GET['token'] ?? $_GET['jwt'] ?? '';
 $returnUrl = $_GET['return_url'] ?? '';
 if ($returnUrl && !validateRedirectUri($returnUrl)) {
     $returnUrl = '';
 }
 
-$payload = deletionVerifyJWT($token);
-$username = $payload['username'] ?? '';
-$request = $payload ? deletionLoadRequest($payload['sub']) : null;
+$auth = deletionAuthenticate($token);
+$username = $auth['username'] ?? '';
+$request = $auth ? deletionLoadRequest($auth['user_id']) : null;
 $pending = $request && $request['status'] === 'pending';
 ?>
 <!DOCTYPE html>
@@ -44,7 +44,7 @@ $pending = $request && $request['status'] === 'pending';
 <div class="container">
     <h1>Delete Account Data</h1>
 
-<?php if (!$payload): ?>
+<?php if (!$auth): ?>
     <div class="danger">
         <b>Not signed in.</b> This page needs a valid login token from one of our sites.
         Sign in on the site you came from and use its delete-account button again.
